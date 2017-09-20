@@ -7,4 +7,4 @@ from django.db import models
 
 class SpeakerModel(models.Model):
     name = models.CharField(max_length=100)
-    sample = models.F
+    sample = models.FileField()
