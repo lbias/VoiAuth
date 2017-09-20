@@ -6,6 +6,7 @@ from django.http import HttpResponse
 from forms import SpeakerForm, AuthForm
 from models import SpeakerModel, AuthModel
 from scripts import ModuleML
+import numpy as np
 # Create your views here.
 
 def input(request):
@@ -19,6 +20,7 @@ def train(request):
             name_val = form.cleaned_data['name']
             model = ModuleML()
             train_x, train_y, label = model.train_model(request.FILES['audio'])
+            model.svm_run()
             s = SpeakerModel()
             s.name = name_val
             s.label = label
@@ -38,4 +40,27 @@ def authenticate(request):
     return render(request, 'authenticate.html', {'form': auth , 'items': list})
 
 def result(request):
-    return HttpResponse('tested')
+    if request.method == 'POST':
+        form = AuthForm(request.POST, request.FILES)
+        if form.is_valid():
+            label = int(request.POST['pick'])
+            model = ModuleML()
+            val, total, pred, counts, values = model.predict(request.FILES['audio'])
+            conf = 0
+            for idx, value in enumerate(values):
+                if value == label:
+                    conf = counts[idx] / total
+
+            if pred == label:
+                st = "Match"
+            else:
+                st = "No Match"
+        else:
+            list = SpeakerModel.objects.all()
+            auth = AuthForm()
+            return render(request, 'authenticate.html', {'form': auth, 'items': list})
+    else:
+        list = SpeakerModel.objects.all()
+        auth = AuthForm()
+        return render(request, 'authenticate.html', {'form': auth, 'items': list})
+    return HttpResponse(st + '\n Confidence Score:\t'+ str(conf) + str(pred) + str(label))
